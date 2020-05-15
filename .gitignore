@@ -1,0 +1,6 @@
+sdl2
+bin
+.vscode
+*.dll
+*.pdb
+*.exe

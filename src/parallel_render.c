@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <parallel_render.h>
 
 void* thread_job(void *a) {
@@ -8,6 +9,7 @@ void* thread_job(void *a) {
 
     int s_index = args->tid * iters;
     int e_index = s_index + iters;
+    printf("tid: %d starting: %d ending: %d\n", args->tid, s_index, e_index);
 
     for (int i = s_index; i < e_index && i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
         const int x = i % (SCREEN_WIDTH);
@@ -16,14 +18,16 @@ void* thread_job(void *a) {
 
         const int c_i = (x + y*SCREEN_WIDTH)*4;
 
-        ray *r = (ray *)malloc(sizeof(ray));
+        ray *r = malloc(sizeof(ray));
         r->x = x;
         r->y = y;
         r->z = 0.;
         r->k = 5000.;
         r->alive = 1;
 
-        color *c = ray_marching(r, args->spheres, args->n_spheres);
+        sphere *current = *( args->spheres );
+
+        color *c = ray_marching(r, current, args->n_spheres);
         args->pixels[c_i + 0] = c->R;
         args->pixels[c_i + 1] = c->G;
         args->pixels[c_i + 2] = c->B;
@@ -33,12 +37,13 @@ void* thread_job(void *a) {
         free(r);
     }
     pthread_exit(NULL);
+    return NULL;
 }
 
-void parallel_render(int8_t *pixels, sphere **spheres, int n_spheres,
-        pthread_t *threads, t_args **args) {
+void parallel_render(int8_t *pixels, sphere *spheres, int n_spheres,
+        pthread_t *threads, t_args args[N_THREADS]) {
     for (int i = 0; i < N_THREADS; i++) {
-        pthread_create(&threads[i], NULL, thread_job, (void *)args[i]);
+        pthread_create(&threads[i], NULL, &thread_job, (void *)&args[i]);
     }
 
     for (int i = 0; i < N_THREADS; i++) {

@@ -36,32 +36,31 @@ uint8_t init() {
     return 1;
 }
 
-sphere** initialize_spheres(int n_spheres) {
-    sphere **s;
-    s = (sphere **)malloc(sizeof(sphere*)*n_spheres);
+sphere* initialize_spheres(int n_spheres) {
+    sphere *s;
+    s = malloc(sizeof(sphere)*n_spheres);
 
     // initialize random seed
     time_t t;
     srand((unsigned) time(&t));
 
     for (int i = 0; i < n_spheres; i++) {
-        s[i] = (sphere *)malloc(sizeof(sphere));
-        s[i]->x = rand() % SCREEN_WIDTH;
-        s[i]->y = rand() % SCREEN_HEIGHT;
-        s[i]->z = rand() % SCREEN_WIDTH + 50;
+        s[i].x = rand() % SCREEN_WIDTH;
+        s[i].y = rand() % SCREEN_HEIGHT;
+        s[i].z = rand() % SCREEN_WIDTH + 50;
         // s[0]->z = 10.;
 
-        s[i]->R = rand() % 255;
-        s[i]->G = rand() % 255;
-        s[i]->B = rand() % 255;
+        s[i].R = rand() % 255;
+        s[i].G = rand() % 255;
+        s[i].B = rand() % 255;
 
-        s[i]->radius = s[i]->z - s[i]->z*0.1;
+        s[i].radius = s[i].z - s[i].z*0.1;
     }
 
     return s;
 }
 
-void sequential_render(int8_t *pixels, sphere **spheres, int n_spheres) {
+void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
     for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++) {
         const int x = i % (SCREEN_WIDTH);
         const int y = i / (SCREEN_WIDTH);
@@ -69,11 +68,11 @@ void sequential_render(int8_t *pixels, sphere **spheres, int n_spheres) {
 
         const int c_i = (x + y*SCREEN_WIDTH)*4;
 
-        ray *r = (ray *)malloc(sizeof(ray));
+        ray *r = malloc(sizeof(ray));
         r->x = x;
         r->y = y;
         r->z = 0.;
-        r->k = 5000.;
+        r->k = 5001.;
         r->alive = 1;
 
         color *c = ray_marching(r, spheres, n_spheres);
@@ -101,34 +100,36 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    printf("nthreads: %d\n", N_THREADS);
+
     SDL_Renderer *renderer = SDL_CreateRenderer(g_window, -1,
-        SDL_RENDERER_ACCELERATED);
+        SDL_RENDERER_SOFTWARE);
 
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888,
         SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    int8_t *pixels = (int8_t *)malloc(
+    int8_t *pixels = malloc(
         SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t));
     
     uint8_t running = 1;
     SDL_Event event;
 
-    sphere **spheres = initialize_spheres(n_spheres);
+    sphere *spheres = initialize_spheres(n_spheres);
 
     #ifdef PARALLEL
     pthread_t threads[N_THREADS];
     // args initialization
-    t_args **args = (t_args **)malloc(sizeof(t_args *)*N_THREADS);
+    t_args args[N_THREADS];
     for (int i = 0; i < N_THREADS; i++) {
-        args[i] = (t_args *)malloc(sizeof(t_args));
-        args[i]->pixels = pixels;
-        args[i]->spheres = spheres;
-        args[i]->n_spheres = n_spheres;
-        args[i]->tid = i;
+        args[i].pixels = pixels;
+        args[i].spheres = &spheres;
+        args[i].n_spheres = n_spheres;
+        args[i].tid = i;
     }
     #endif
 
-    while(running) {
+    uint32_t iters = 0;
+    while(running && iters++ < 100) {
         uint64_t start = SDL_GetPerformanceCounter();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -136,8 +137,8 @@ int main(int argc, char *argv[]) {
 
         // polling event 
         const Uint8* keys = SDL_GetKeyboardState(NULL);
-        if (keys[SDL_SCANCODE_UP]) spheres[0]->z += 2.;
-        if (keys[SDL_SCANCODE_DOWN]) spheres[0]->z -= 2.;
+        if (keys[SDL_SCANCODE_UP]) spheres[0].z += 2.;
+        if (keys[SDL_SCANCODE_DOWN]) spheres[0].z -= 2.;
         while(SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
@@ -145,10 +146,10 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        #ifndef PARALLEL
-        sequential_render(pixels, spheres, n_spheres);
-        #else
+        #ifdef PARALLEL
         parallel_render(pixels, spheres, n_spheres, threads, args);
+        #else
+        sequential_render(pixels, spheres, n_spheres);
         #endif
 
         SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
@@ -158,19 +159,14 @@ int main(int argc, char *argv[]) {
         uint64_t end = SDL_GetPerformanceCounter();
         const double freq = (double)SDL_GetPerformanceFrequency();
         const float secs = (float)(end - start) /(freq);
-        printf("%f\n", secs*1000);
+        printf("%f\n", 1/(secs));
     }
 
+    SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(g_window);
 
-    for (int i = 0; i < n_spheres; free(spheres[i]), i++);
     free(spheres);
-
-    #ifdef PARALLEL
-    for (int i = 0; i < N_THREADS; free(args[i]), i++);
-    free(args);
-    #endif
 
     SDL_Quit();
     return EXIT_SUCCESS;

@@ -4,8 +4,8 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-color* ray_marching(ray *r, sphere **spheres, int n_spheres) {
-    color *c = (color *)malloc(sizeof(color));
+color* ray_marching(ray *r, sphere *spheres, int n_spheres) {
+    color *c = malloc(sizeof(color));
     c->R = 0;
     c->G = 0;
     c->B = 0;
@@ -14,14 +14,14 @@ color* ray_marching(ray *r, sphere **spheres, int n_spheres) {
         for (int i = 0; i < n_spheres; i++) {
             // intensity is negative since you're moving forward while the
             // intensity is getting lower
-            const uint8_t impact = check_impact(spheres[i], r->x, r->y, r->z);
+            const uint8_t impact = check_impact(&spheres[i], r->x, r->y, r->z);
 
             if (impact) {
                 float dz = (r->z);
                 r->intensity = (r->k)/(dz*dz);
-                c->R = min(spheres[i]->R * r->intensity, 255);
-                c->G = min(spheres[i]->G * r->intensity, 255);
-                c->B = min(spheres[i]->B * r->intensity, 255);
+                c->R = min(spheres[i].R * r->intensity, 255);
+                c->G = min(spheres[i].G * r->intensity, 255);
+                c->B = min(spheres[i].B * r->intensity, 255);
                 return c;
             }
         }

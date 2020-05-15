@@ -1,5 +1,5 @@
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdint.h>
 #pragma once
 
 typedef struct _ray {
@@ -29,6 +29,6 @@ typedef struct _color {
 } color;
 
 // check if an sphere was impacted
-color* ray_marching(ray *r, sphere **spheres, int n_spheres);
+color* ray_marching(ray *r, sphere *spheres, int n_spheres);
 
 uint8_t check_impact(sphere *s, float x, float y, float z);

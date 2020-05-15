@@ -1,24 +1,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 #include <rays.h>
-#include <SDL.h>
+#include <constants.h>
 
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
+#include <pthread.h>
 
-const int SCREEN_WIDTH = 500;
-const int SCREEN_HEIGHT = 500;
+#ifdef PARALLEL
+#include <parallel_render.h>
+#endif
+
+#include "SDL.h"
 
 uint8_t init();
 
-void close();
-
 SDL_Window *g_window = NULL;
 SDL_Renderer *renderer = NULL;
-
 
 uint8_t init() {
     uint8_t success = 1;
@@ -89,6 +87,7 @@ void sequential_render(int8_t *pixels, sphere **spheres, int n_spheres) {
     }
 }
 
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("Debe ingresar la cantidad de esferas\n");
@@ -116,6 +115,19 @@ int main(int argc, char *argv[]) {
 
     sphere **spheres = initialize_spheres(n_spheres);
 
+    #ifdef PARALLEL
+    pthread_t threads[N_THREADS];
+    // args initialization
+    t_args **args = (t_args **)malloc(sizeof(t_args *)*N_THREADS);
+    for (int i = 0; i < N_THREADS; i++) {
+        args[i] = (t_args *)malloc(sizeof(t_args));
+        args[i]->pixels = pixels;
+        args[i]->spheres = spheres;
+        args[i]->n_spheres = n_spheres;
+        args[i]->tid = i;
+    }
+    #endif
+
     while(running) {
         const uint64_t start = SDL_GetPerformanceCounter();
 
@@ -133,22 +145,32 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        #ifndef PARALLEL
         sequential_render(pixels, spheres, n_spheres);
+        #else
+        parallel_render(pixels, spheres, n_spheres, threads, args);
+        #endif
 
         SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
         const uint8_t end = SDL_GetPerformanceCounter();
-        const uint8_t freq = SDL_GetPerformanceFrequency();
+        const double freq = SDL_GetPerformanceFrequency();
         const double secs = (end - start) /((double)freq);
-        printf("%lf\n", secs*100);
+        printf("%lf\n", secs*1000);
     }
+
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(g_window);
 
     for (int i = 0; i < n_spheres; free(spheres[i]), i++);
     free(spheres);
+
+    #ifdef PARALLEL
+    for (int i = 0; i < N_THREADS; free(args[i]), i++);
+    free(args);
+    #endif
 
     SDL_Quit();
     return EXIT_SUCCESS;

@@ -4,3 +4,5 @@ bin
 *.dll
 *.pdb
 *.exe
+main
+parallel

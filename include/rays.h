@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#pragma once
 
 typedef struct _ray {
     uint8_t alive;

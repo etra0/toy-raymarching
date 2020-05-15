@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     while(running) {
-        const uint64_t start = SDL_GetPerformanceCounter();
+        uint64_t start = SDL_GetPerformanceCounter();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
@@ -155,10 +155,10 @@ int main(int argc, char *argv[]) {
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
-        const uint8_t end = SDL_GetPerformanceCounter();
-        const double freq = SDL_GetPerformanceFrequency();
-        const double secs = (end - start) /((double)freq);
-        printf("%lf\n", secs*1000);
+        uint64_t end = SDL_GetPerformanceCounter();
+        const double freq = (double)SDL_GetPerformanceFrequency();
+        const float secs = (float)(end - start) /(freq);
+        printf("%f\n", secs*1000);
     }
 
     SDL_DestroyRenderer(renderer);

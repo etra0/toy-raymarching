@@ -26,7 +26,7 @@ uint8_t init() {
         return 0;
     }
 
-    g_window = SDL_CreateWindow("Ray marching", SDL_WINDOWPOS_UNDEFINED,
+    g_window = SDL_CreateWindow("Ray casting", SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     if (!g_window) {
         printf("No se pudo crear la ventana: %s", SDL_GetError());
@@ -64,7 +64,8 @@ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
     for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++) {
         const int x = i % (SCREEN_WIDTH);
         const int y = i / (SCREEN_WIDTH);
-        const float current_value = (float)i / (float)(SCREEN_WIDTH * SCREEN_HEIGHT);
+        const float current_value =
+            (float)i / (float)(SCREEN_WIDTH * SCREEN_HEIGHT);
 
         const int c_i = (x + y*SCREEN_WIDTH)*4;
 
@@ -107,8 +108,10 @@ int main(int argc, char *argv[]) {
     SDL_Renderer *renderer = SDL_CreateRenderer(g_window, -1,
         SDL_RENDERER_SOFTWARE);
 
-    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888,
-        SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+    // Texture used for the 3d world simulation
+    SDL_Texture *texture = SDL_CreateTexture(renderer,
+            SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
+            SCREEN_WIDTH, SCREEN_HEIGHT);
 
     int8_t *pixels = malloc(
         SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t));
@@ -120,7 +123,6 @@ int main(int argc, char *argv[]) {
 
     #ifdef PARALLEL
     pthread_t threads[N_THREADS];
-    // args initialization
     #endif
 
     uint32_t iters = 0;
@@ -130,10 +132,6 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
 
-        // polling event 
-        const Uint8* keys = SDL_GetKeyboardState(NULL);
-        if (keys[SDL_SCANCODE_UP]) spheres[0].z += 2.;
-        if (keys[SDL_SCANCODE_DOWN]) spheres[0].z -= 2.;
         while(SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
@@ -151,6 +149,7 @@ int main(int argc, char *argv[]) {
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 
+        // calculation of frames per second.
         uint64_t end = SDL_GetPerformanceCounter();
         const double freq = (double)SDL_GetPerformanceFrequency();
         const float secs = (float)(end - start) /(freq);

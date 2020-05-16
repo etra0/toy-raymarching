@@ -1,5 +1,6 @@
 GXX=gcc
-INCLUDE=-Iinclude/ -I/usr/include/SDL2/ -DN_THREADS=4
+NTHREADS=4
+INCLUDE=-Iinclude/ -I/usr/include/SDL2/ -DN_THREADS=$(NTHREADS)
 LINK=-lSDL2main -lSDL2
 
 main: src/main.c bin/rays.o

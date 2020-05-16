@@ -4,7 +4,12 @@ Sebastián Aedo
 
 # Instrucciones de compilación
 Se require de la librería SDL para compilar en Linux (disponible
-en la gran mayoría de los repositorios por defecto, en Ubuntu viene instalado)
+en la gran mayoría de los repositorios por defecto), en el caso 
+de Ubuntu:
+
+```
+sudo apt install libsdl2-dev
+```
 
 # Lineal
 Para la forma lineal, simplemente ejecutar `make`

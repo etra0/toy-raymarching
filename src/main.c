@@ -119,13 +119,6 @@ int main(int argc, char *argv[]) {
     #ifdef PARALLEL
     pthread_t threads[N_THREADS];
     // args initialization
-    t_args args[N_THREADS];
-    for (int i = 0; i < N_THREADS; i++) {
-        args[i].pixels = pixels;
-        args[i].spheres = &spheres;
-        args[i].n_spheres = n_spheres;
-        args[i].tid = i;
-    }
     #endif
 
     uint32_t iters = 0;
@@ -147,7 +140,7 @@ int main(int argc, char *argv[]) {
         }
 
         #ifdef PARALLEL
-        parallel_render(pixels, spheres, n_spheres, threads, args);
+        parallel_render(pixels, spheres, n_spheres, threads);
         #else
         sequential_render(pixels, spheres, n_spheres);
         #endif

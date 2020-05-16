@@ -12,8 +12,6 @@ color* ray_marching(ray *r, sphere *spheres, int n_spheres) {
 
     do {
         for (int i = 0; i < n_spheres; i++) {
-            // intensity is negative since you're moving forward while the
-            // intensity is getting lower
             const uint8_t impact = check_impact(&spheres[i], r->x, r->y, r->z);
 
             if (impact) {

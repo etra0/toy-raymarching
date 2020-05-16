@@ -4,7 +4,7 @@
 // is in charge to render a portion of the screen, speeding up the rendering
 // process.
 void* thread_job(void *a) {
-    const int screen_size = SCREEN_WIDTH * SCREEN_HEIGHT
+    const int screen_size = SCREEN_WIDTH * SCREEN_HEIGHT;
     const int iters = (screen_size)/N_THREADS;
 
     // casting arguments
@@ -12,7 +12,7 @@ void* thread_job(void *a) {
 
     int s_index = args->tid * iters;
     int e_index = s_index + iters;
-    for (int i = s_index; i < e_index && i < screen:size; i++) {
+    for (int i = s_index; i < e_index && i < screen_size; i++) {
         const int x = i % (SCREEN_WIDTH);
         const int y = i / (SCREEN_WIDTH);
         const float current_value = 

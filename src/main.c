@@ -100,7 +100,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    #ifdef PARALLEL
     printf("nthreads: %d\n", N_THREADS);
+    #endif
 
     SDL_Renderer *renderer = SDL_CreateRenderer(g_window, -1,
         SDL_RENDERER_SOFTWARE);

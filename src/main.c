@@ -11,7 +11,7 @@
 #include <parallel_render.h>
 #endif
 
-#include "SDL.h"
+#include <SDL.h>
 
 uint8_t init();
 

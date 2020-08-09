@@ -1,7 +1,7 @@
 #include <constants.h>
 #include <rays.h>
 #include <pthread.h>
-#include "SDL.h"
+#include <SDL.h>
 
 // Structure of arguments needed for the parallel computing of 
 // rays.

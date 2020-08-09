@@ -1,11 +1,8 @@
 #include <rays.h>
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
+#include <algorithm>
 
 color* ray_marching(ray *r, sphere *spheres, int n_spheres) {
-    color *c = malloc(sizeof(color));
+    color *c = (color *)malloc(sizeof(color));
     c->R = 0;
     c->G = 0;
     c->B = 0;
@@ -17,9 +14,9 @@ color* ray_marching(ray *r, sphere *spheres, int n_spheres) {
             if (impact) {
                 float dz = (r->z);
                 r->intensity = (r->k)/(dz*dz);
-                c->R = min(spheres[i].R * r->intensity, 255);
-                c->G = min(spheres[i].G * r->intensity, 255);
-                c->B = min(spheres[i].B * r->intensity, 255);
+                c->R = std::min<int>(spheres[i].R * r->intensity, 255);
+                c->G = std::min<int>(spheres[i].G * r->intensity, 255);
+                c->B = std::min<int>(spheres[i].B * r->intensity, 255);
                 return c;
             }
         }

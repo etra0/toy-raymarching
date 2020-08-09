@@ -5,12 +5,13 @@
 #include <rays.h>
 #include <constants.h>
 
-#include <pthread.h>
 
 #ifdef PARALLEL
+#include <pthread.h>
 #include <parallel_render.h>
 #endif
 
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 uint8_t init();
@@ -38,7 +39,7 @@ uint8_t init() {
 
 sphere* initialize_spheres(int n_spheres) {
     sphere *s;
-    s = malloc(sizeof(sphere)*n_spheres);
+    s = (sphere *)malloc(sizeof(sphere)*n_spheres);
 
     // initialize random seed
     time_t t;
@@ -69,7 +70,7 @@ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
 
         const int c_i = (x + y*SCREEN_WIDTH)*4;
 
-        ray *r = malloc(sizeof(ray));
+        ray *r = (ray *)malloc(sizeof(ray));
         r->x = x;
         r->y = y;
         r->z = 0.;
@@ -94,6 +95,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    SDL_SetMainReady();
+
     int n_spheres = atoi(argv[1]);
 
     if (!init()) {
@@ -113,7 +116,7 @@ int main(int argc, char *argv[]) {
             SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    int8_t *pixels = malloc(
+    int8_t *pixels = (int8_t *)malloc(
         SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t));
     
     uint8_t running = 1;
@@ -151,8 +154,8 @@ int main(int argc, char *argv[]) {
 
         // calculation of frames per second.
         uint64_t end = SDL_GetPerformanceCounter();
-        const double freq = (double)SDL_GetPerformanceFrequency();
-        const float secs = (float)(end - start) /(freq);
+        double freq = (double)SDL_GetPerformanceFrequency();
+        float secs = (float)(end - start) /(freq);
         printf("%f\n", 1/(secs));
     }
 

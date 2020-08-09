@@ -1,18 +1,22 @@
-GXX=gcc.exe
+GXX=nvcc.exe
+FLAGS=-O2
 INCLUDE=-Ivendor/sdl2/include/SDL2/ -Iinclude/ -Ivendor/pthreads-win32/include/
-LINK=-Lvendor/sdl2/lib/ -Lvendor/pthreads-win32/lib/ -lmingw32 -lSDL2main -lSDL2 
+LINK=-Lvendor/sdl2_windows/lib/x64/ -Lvendor/pthreads-win32/lib/ -lSDL2main -lSDL2 
 OUTPUT=bin/
+NTHREADS=16
 
-all: $(OUTPUT)/main.exe $(OUTPUT)/parallel.exe
+main: $(OUTPUT)/main.exe
 
-$(OUTPUT)/main.exe: src/main.c bin/rays.o
-	$(GXX) $(FLAGS) -g -o $@  $? $(INCLUDE) $(LINK)
+parallel: $(OUTPUT)/parallel.exe
 
-$(OUTPUT)/parallel.exe: src/main.c bin/rays.o bin/parallel_render.o
-	$(GXX) $(FLAGS)	-g -o $@ -DPARALLEL $? $(INCLUDE) $(LINK) -lpthreadGC2 -DN_THREADS=10
+$(OUTPUT)/main.exe: src/main.cpp bin/rays.obj
+	$(GXX) $(FLAGS) -g -o $@ $? $(INCLUDE) $(LINK) 
 
-bin/rays.o: src/rays.c
+$(OUTPUT)/parallel.exe: src/main.cpp bin/rays.obj bin/parallel_render.obj
+	$(GXX) $(FLAGS)	-g -o $@ -DPARALLEL $? $(INCLUDE) $(LINK) -lpthreadGC2 -DN_THREADS=$(NTHREADS)
+
+bin/rays.obj: src/rays.cpp
 	$(GXX) $(FLAGS) -g -c -o $@ $? $(INCLUDE)
 
-bin/parallel_render.o: src/parallel_render.c
+bin/parallel_render.obj: src/parallel_render.cpp
 	$(GXX) $(FLAGS) -g -c -o $@ $? $(INCLUDE)

@@ -1,8 +1,8 @@
 #include <rays.h>
-#include <algorithm>
+#define PI 3.141592653589793238462643383279
+#define cap_4pi(x) if (x > 4*PI) { x = 0; }
 
-color* ray_marching(ray *r, sphere *spheres, int n_spheres) {
-    color *c = (color *)malloc(sizeof(color));
+color* ray_marching(ray *r, sphere *spheres, int n_spheres, color *c) {
     c->R = 0;
     c->G = 0;
     c->B = 0;
@@ -37,4 +37,50 @@ uint8_t check_impact(sphere *s, float x, float y, float z) {
     float r = (s->radius) * (s->radius);
 
     return d <= r;
+}
+
+sphere* initialize_spheres(int n_spheres) {
+    sphere *s;
+    s = (sphere *)malloc(sizeof(sphere)*n_spheres);
+
+    // initialize random seed
+    time_t t;
+    srand((unsigned) time(&t));
+
+    for (int i = 0; i < n_spheres; i++) {
+        s[i].x = rand() % SCREEN_WIDTH;
+        s[i].y = rand() % SCREEN_HEIGHT;
+        s[i].z = rand() % SCREEN_WIDTH + 50;
+
+        s[i].R = rand() % 255;
+        s[i].G = rand() % 255;
+        s[i].B = rand() % 255;
+
+        s[i].radius = s[i].z - s[i].z*0.1;
+        s[i].pos_x = s[i].x;
+        s[i].pos_y = s[i].y;
+        s[i].pos_z = s[i].z;
+
+        s[i].curr_i = 0.;
+        s[i].curr_z = 0.;
+
+        s[i].scale_i = (rand() % 200);
+        s[i].scale_z = (rand() % 200);
+
+    }
+
+    return s;
+}
+
+void move_spheres(sphere *spheres, int n_spheres) {
+  for (int i = 0; i < n_spheres; i++) {
+    spheres[i].x = spheres[i].pos_x + spheres[i].scale_i * cos(spheres[i].curr_i);
+    spheres[i].y = spheres[i].pos_y + spheres[i].scale_i * sin(spheres[i].curr_i);
+    spheres[i].z = spheres[i].pos_z + spheres[i].scale_i * sin(spheres[i].curr_z);
+
+    spheres[i].curr_i += 0.01;
+    spheres[i].curr_z += 0.01;
+    cap_4pi(spheres[i].curr_z);
+    cap_4pi(spheres[i].curr_z);
+  }
 }

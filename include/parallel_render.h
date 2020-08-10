@@ -9,6 +9,8 @@ typedef struct args {
     int8_t *pixels;
     sphere *spheres;
     int n_spheres;
+    color *colors;
+    ray *rays;
 
     // the tid is used for the calculatio of the portion of the
     // screen that will be calculated by that thread.
@@ -20,4 +22,4 @@ typedef struct args {
 void* thread_job(void *a);
 
 void parallel_render(int8_t *pixels, sphere *spheres, int n_spheres,
-        pthread_t *threads);
+        pthread_t *threads, ray *rays, color *colors);

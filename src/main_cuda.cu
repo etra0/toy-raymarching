@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <algorithm>
 #include <rays.h>
 
@@ -64,30 +63,6 @@ __device__ void ray_marching_c(ray *r, sphere *spheres, int n_spheres, color *c)
         r->z += 1;
         r->alive = r->z < 100;
     } while(r->alive);
-}
-
-sphere* initialize_spheres(int n_spheres) {
-    sphere *s;
-    s = (sphere *)malloc(sizeof(sphere)*n_spheres);
-
-    // initialize random seed
-    time_t t;
-    srand((unsigned) time(&t));
-
-    for (int i = 0; i < n_spheres; i++) {
-        s[i].x = rand() % SCREEN_WIDTH;
-        s[i].y = rand() % SCREEN_HEIGHT;
-        s[i].z = rand() % SCREEN_WIDTH + 50;
-        // s[0]->z = 10.;
-
-        s[i].R = rand() % 255;
-        s[i].G = rand() % 255;
-        s[i].B = rand() % 255;
-
-        s[i].radius = s[i].z - s[i].z*0.1;
-    }
-
-    return s;
 }
 
 __global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
@@ -154,7 +129,6 @@ int main(int argc, char *argv[]) {
     sphere *spheres_dev;
     cudaMalloc((void **)&spheres_dev, n_spheres*sizeof(sphere));
     cudaMemcpy(spheres_dev,spheres,n_spheres*sizeof(sphere), cudaMemcpyHostToDevice);
-    free(spheres);
 
     // alloc rays & colors
     color *colors;
@@ -178,9 +152,12 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
-        //cudaMemcpy(dest, orig,  sizeof(), cudaMemcpyDeviceToHost);
-        sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
+
+        move_spheres(spheres, n_spheres);
+        cudaMemcpy(spheres_dev,spheres,n_spheres*sizeof(sphere), cudaMemcpyHostToDevice);
+
         cudaMemcpy(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost);
+        sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
 
         SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
         SDL_RenderCopy(renderer, texture, NULL, NULL);

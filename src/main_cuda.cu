@@ -90,8 +90,8 @@ sphere* initialize_spheres(int n_spheres) {
     return s;
 }
 
-__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
-    int tid= threadIdx.x + blockDim.x * blockIdx.x;
+__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors, int offset) {
+    int tid= threadIdx.x + blockDim.x * blockIdx.x + offset;
     const int x = tid % (SCREEN_WIDTH);
     const int y = tid / (SCREEN_WIDTH);
 
@@ -123,6 +123,7 @@ struct arr{
 
 void foo(void* userData){
     struct arr *b = (struct arr*)userData;
+    SDL_RenderClear(b->renderer);
     SDL_UpdateTexture(b->texture, NULL, b->pixels, SCREEN_WIDTH * 4);
     SDL_RenderCopy(b->renderer, b->texture, NULL, NULL);
     SDL_RenderPresent(b->renderer);
@@ -152,7 +153,8 @@ int main(int argc, char *argv[]) {
             SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    int8_t *pixels = (int8_t *)malloc(
+    int8_t *pixels;
+    cudaMallocHost(&pixels,
         SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t));
     
     int8_t *pixels_dev;
@@ -176,20 +178,27 @@ int main(int argc, char *argv[]) {
     cudaMalloc((void **)&rays, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(ray));
 
     uint32_t iters = 0;
-    int block_size = 256, grid_size = (int)ceil((float)SCREEN_HEIGHT*SCREEN_WIDTH/256.);
+    int block_size = 256, grid_size = (int)ceil((float)(SCREEN_HEIGHT*SCREEN_WIDTH)/256.);
     float secs = 0;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     cudaStream_t x,y;
     cudaStreamCreate(&x);
     cudaStreamCreate(&y);
     int off = 0;
+    struct arr *arr;
+    arr = new (struct arr);
+    arr->pixels = pixels;
+    arr->texture = texture;
+    arr->renderer = renderer;
+    // int size = SCREEN_HEIGHT*SCREEN_WIDTH;
     while(running) {
         // cudaStream_t us;
         // if (off%2) us = x;
         // else us = y;
         uint64_t start = SDL_GetPerformanceCounter();
-        //
-        SDL_RenderClear(renderer);
+        // //
+        // //cudaMemcpy(dest, orig,  sizeof(), cudaMemcpyDeviceToHost);
+        // //SDL_RenderClear(renderer);
 
         while(SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -197,13 +206,8 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
-        //cudaMemcpy(dest, orig,  sizeof(), cudaMemcpyDeviceToHost);
-        struct arr *arr;
-        arr = new (struct arr);
-        arr->pixels = pixels;
-        arr->texture = texture;
-        arr->renderer = renderer;
-        sequential_render<<<grid_size,block_size,0,off%2?x:y>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
+        
+        sequential_render<<<grid_size,block_size,0,off%2?x:y>>>(pixels_dev, spheres_dev, n_spheres, rays, colors,0);
         cudaMemcpyAsync(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost,off%2?x:y);
         cudaLaunchHostFunc(off%2?x:y, (cudaHostFn_t)foo, (void*)arr);
 

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <algorithm>
 #include <rays.h>
 
@@ -66,32 +65,8 @@ __device__ void ray_marching_c(ray *r, sphere *spheres, int n_spheres, color *c)
     } while(r->alive);
 }
 
-sphere* initialize_spheres(int n_spheres) {
-    sphere *s;
-    s = (sphere *)malloc(sizeof(sphere)*n_spheres);
-
-    // initialize random seed
-    time_t t;
-    srand((unsigned) time(&t));
-
-    for (int i = 0; i < n_spheres; i++) {
-        s[i].x = rand() % SCREEN_WIDTH;
-        s[i].y = rand() % SCREEN_HEIGHT;
-        s[i].z = rand() % SCREEN_WIDTH + 50;
-        // s[0]->z = 10.;
-
-        s[i].R = rand() % 255;
-        s[i].G = rand() % 255;
-        s[i].B = rand() % 255;
-
-        s[i].radius = s[i].z - s[i].z*0.1;
-    }
-
-    return s;
-}
-
-__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors, int offset) {
-    int tid= threadIdx.x + blockDim.x * blockIdx.x + offset;
+__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
+    int tid= threadIdx.x + blockDim.x * blockIdx.x;
     const int x = tid % (SCREEN_WIDTH);
     const int y = tid / (SCREEN_WIDTH);
 
@@ -118,11 +93,14 @@ __global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres
 struct arr{
     SDL_Renderer *renderer;
     SDL_Texture *texture;
+    sphere *spheres;
+    int n_spheres;
     int8_t *pixels;
 };
 
 void foo(void* userData){
     struct arr *b = (struct arr*)userData;
+    move_spheres(b->spheres, b->n_spheres);
     SDL_RenderClear(b->renderer);
     SDL_UpdateTexture(b->texture, NULL, b->pixels, SCREEN_WIDTH * 4);
     SDL_RenderCopy(b->renderer, b->texture, NULL, NULL);
@@ -165,11 +143,14 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     sphere *spheres = initialize_spheres(n_spheres);
+    sphere *spheres_async;
+    cudaMallocHost((void**)&spheres_async,n_spheres * sizeof(spheres));
+
+    memcpy(spheres_async, spheres, n_spheres * sizeof(spheres));
 
     sphere *spheres_dev;
     cudaMalloc((void **)&spheres_dev, n_spheres*sizeof(sphere));
     cudaMemcpy(spheres_dev,spheres,n_spheres*sizeof(sphere), cudaMemcpyHostToDevice);
-    free(spheres);
 
     // alloc rays & colors
     color *colors;
@@ -190,6 +171,8 @@ int main(int argc, char *argv[]) {
     arr->pixels = pixels;
     arr->texture = texture;
     arr->renderer = renderer;
+    arr->spheres = spheres_async;
+    arr->n_spheres = n_spheres;
     // int size = SCREEN_HEIGHT*SCREEN_WIDTH;
     while(running) {
         // cudaStream_t us;
@@ -207,9 +190,22 @@ int main(int argc, char *argv[]) {
             }
         }
         
-        sequential_render<<<grid_size,block_size,0,off%2?x:y>>>(pixels_dev, spheres_dev, n_spheres, rays, colors,0);
+
+        /**
+
+        saaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        **/
+        sequential_render<<<grid_size,block_size,0,off%2?x:y>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
+        cudaMemcpyAsync(spheres_dev,spheres_async,n_spheres*sizeof(sphere), cudaMemcpyHostToDevice, off%2?x:y);
         cudaMemcpyAsync(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost,off%2?x:y);
         cudaLaunchHostFunc(off%2?x:y, (cudaHostFn_t)foo, (void*)arr);
+
+        
+
+        //cudaMemcpy(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost);
+        //sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
+
+        
 
         // calculation of frames per second.
         uint64_t end = SDL_GetPerformanceCounter();
@@ -217,6 +213,7 @@ int main(int argc, char *argv[]) {
         secs = (float)(end - start) /(freq);
         printf("%f\n", 1/(secs));
         off++;
+        
     }
     printf("%f\n", 1/(secs));
 

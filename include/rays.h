@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <algorithm>
+#include <constants.h>
+#include <time.h>
 #pragma once
 
 // Ray traced from the camera to the objects with a threshold of 100 points
@@ -25,6 +28,17 @@ typedef struct _sphere {
     int R;
     int G;
     int B;
+
+    // delta pos for the sphere movement
+    float pos_x;
+    float pos_y;
+    float pos_z;
+
+    float curr_i;
+    float curr_z;
+
+    float scale_i;
+    float scale_z;
 } sphere;
 
 // The ending structure to load to the viewer.
@@ -39,8 +53,12 @@ typedef struct _color {
 // if it does, the algorithm stops and returns the new color
 // if z get bigger than 100, the algorithm returns a black color which
 // means it didn't impacted anything
-color* ray_marching(ray *r, sphere *spheres, int n_spheres);
+color* ray_marching(ray *r, sphere *spheres, int n_spheres, color *c);
 
 // Check if a sphere is impacted using the known formula to check
 // if a point is inside a circle/sphere
 uint8_t check_impact(sphere *s, float x, float y, float z);
+
+void move_spheres(sphere *spheres, int n_spheres);
+
+sphere* initialize_spheres(int n_spheres);

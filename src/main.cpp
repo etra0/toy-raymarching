@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
-#include <rays.h>
 #include <constants.h>
+#include <rays.h>
 
 
 #ifdef PARALLEL
@@ -18,6 +17,7 @@ uint8_t init();
 
 SDL_Window *g_window = NULL;
 SDL_Renderer *renderer = NULL;
+
 
 uint8_t init() {
     uint8_t success = 1;
@@ -37,31 +37,9 @@ uint8_t init() {
     return 1;
 }
 
-sphere* initialize_spheres(int n_spheres) {
-    sphere *s;
-    s = (sphere *)malloc(sizeof(sphere)*n_spheres);
 
-    // initialize random seed
-    time_t t;
-    srand((unsigned) time(&t));
 
-    for (int i = 0; i < n_spheres; i++) {
-        s[i].x = rand() % SCREEN_WIDTH;
-        s[i].y = rand() % SCREEN_HEIGHT;
-        s[i].z = rand() % SCREEN_WIDTH + 50;
-        // s[0]->z = 10.;
-
-        s[i].R = rand() % 255;
-        s[i].G = rand() % 255;
-        s[i].B = rand() % 255;
-
-        s[i].radius = s[i].z - s[i].z*0.1;
-    }
-
-    return s;
-}
-
-void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
+void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
     for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++) {
         const int x = i % (SCREEN_WIDTH);
         const int y = i / (SCREEN_WIDTH);
@@ -70,21 +48,20 @@ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
 
         const int c_i = (x + y*SCREEN_WIDTH)*4;
 
-        ray *r = (ray *)malloc(sizeof(ray));
+        ray *r = &rays[x + y*SCREEN_WIDTH];
         r->x = x;
         r->y = y;
         r->z = 0.;
         r->k = 5001.;
         r->alive = 1;
 
-        color *c = ray_marching(r, spheres, n_spheres);
+        color *c = &colors[x + y*SCREEN_WIDTH];
+        ray_marching(r, spheres, n_spheres, c);
         pixels[c_i + 0] = c->R;
         pixels[c_i + 1] = c->G;
         pixels[c_i + 2] = c->B;
         pixels[c_i + 3] = SDL_ALPHA_OPAQUE;
 
-        free(c);
-        free(r);
     }
 }
 
@@ -123,13 +100,15 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     sphere *spheres = initialize_spheres(n_spheres);
+    color *colors = (color *)malloc(SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(color));;
+    ray *rays = (ray *)malloc(SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(ray));;
 
     #ifdef PARALLEL
     pthread_t threads[N_THREADS];
     #endif
 
     uint32_t iters = 0;
-    while(running && iters++ < 100) {
+    while(running) {
         uint64_t start = SDL_GetPerformanceCounter();
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -142,13 +121,15 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        move_spheres(spheres, n_spheres);
+
         #ifdef PARALLEL
-        parallel_render(pixels, spheres, n_spheres, threads);
+        parallel_render(pixels, spheres, n_spheres, threads, rays, colors);
         #else
-        sequential_render(pixels, spheres, n_spheres);
+        sequential_render(pixels, spheres, n_spheres, rays, colors);
         #endif
 
-        SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
+        SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * 4);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
 

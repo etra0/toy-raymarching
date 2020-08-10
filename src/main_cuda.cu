@@ -31,7 +31,7 @@ uint8_t init() {
 
     return 1;
 }
-__device__ void check_impact_c(sphere *s, float x, float y, float z, int* F) {
+__device__ inline void check_impact_c(sphere *s, float x, float y, float z, int* F) {
     float xd = x - (s->x);
     float yd = y - (s->y);
     float zd = z - (s->z);
@@ -90,29 +90,29 @@ sphere* initialize_spheres(int n_spheres) {
     return s;
 }
 
-__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres) {
+__global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
     int tid= threadIdx.x + blockDim.x * blockIdx.x;
     const int x = tid % (SCREEN_WIDTH);
     const int y = tid / (SCREEN_WIDTH);
 
     const int c_i = tid*4;
 
-    ray *r = new ray;
-    r->x = x;
-    r->y = y;
-    r->z = 0.;
-    r->k = 5001.;
-    r->alive = 1;
-    color *c = new color;
-    c->R = 0; c->B = 0; c->G=0;
-    ray_marching_c(r, spheres, n_spheres, c);
-    pixels[c_i + 0] = c->R;
-    pixels[c_i + 1] = c->G;
-    pixels[c_i + 2] = c->B;
-    pixels[c_i + 3] = SDL_ALPHA_OPAQUE;
+    if (tid < SCREEN_WIDTH * SCREEN_HEIGHT) {
+      ray *r = &rays[tid];
+      r->x = x;
+      r->y = y;
+      r->z = 0.;
+      r->k = 5001.;
+      r->alive = 1;
+      color *c = &colors[tid];
+      c->R = 0; c->B = 0; c->G=0;
+      ray_marching_c(r, spheres, n_spheres, c);
+      pixels[c_i + 0] = c->R;
+      pixels[c_i + 1] = c->G;
+      pixels[c_i + 2] = c->B;
+      pixels[c_i + 3] = SDL_ALPHA_OPAQUE;
 
-    delete c;
-    delete r;
+    }
 }
 
 
@@ -156,11 +156,17 @@ int main(int argc, char *argv[]) {
     cudaMemcpy(spheres_dev,spheres,n_spheres*sizeof(sphere), cudaMemcpyHostToDevice);
     free(spheres);
 
+    // alloc rays & colors
+    color *colors;
+    ray *rays;
+    cudaMalloc((void **)&colors, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(color));
+    cudaMalloc((void **)&rays, SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(ray));
+
     uint32_t iters = 0;
     int block_size = 256, grid_size = (int)ceil((float)SCREEN_HEIGHT*SCREEN_WIDTH/256.);
     float secs = 0;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    while(running && iters++ < 100) {
+    while(running ) {
         uint64_t start = SDL_GetPerformanceCounter();
 
         //
@@ -173,7 +179,7 @@ int main(int argc, char *argv[]) {
             }
         }
         //cudaMemcpy(dest, orig,  sizeof(), cudaMemcpyDeviceToHost);
-        sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres);
+        sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
         cudaMemcpy(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost);
 
         SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
@@ -184,6 +190,7 @@ int main(int argc, char *argv[]) {
         uint64_t end = SDL_GetPerformanceCounter();
         double freq = (double)SDL_GetPerformanceFrequency();
         secs = (float)(end - start) /(freq);
+        printf("%f\n", 1/(secs));
         
     }
     printf("%f\n", 1/(secs));
@@ -194,6 +201,8 @@ int main(int argc, char *argv[]) {
 
     cudaFree(spheres_dev);
     cudaFree(pixels_dev);
+    cudaFree(rays);
+    cudaFree(colors);
 
     SDL_Quit();
     return EXIT_SUCCESS;

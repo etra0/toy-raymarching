@@ -115,19 +115,6 @@ __global__ void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres
     }
 }
 
-struct arr{
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
-    int8_t *pixels;
-};
-
-void foo(void* userData){
-    struct arr *b = (struct arr*)userData;
-    SDL_UpdateTexture(b->texture, NULL, b->pixels, SCREEN_WIDTH * 4);
-    SDL_RenderCopy(b->renderer, b->texture, NULL, NULL);
-    SDL_RenderPresent(b->renderer);
-    return;
-}
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -179,15 +166,9 @@ int main(int argc, char *argv[]) {
     int block_size = 256, grid_size = (int)ceil((float)SCREEN_HEIGHT*SCREEN_WIDTH/256.);
     float secs = 0;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    cudaStream_t x,y;
-    cudaStreamCreate(&x);
-    cudaStreamCreate(&y);
-    int off = 0;
-    while(running) {
-        // cudaStream_t us;
-        // if (off%2) us = x;
-        // else us = y;
+    while(running ) {
         uint64_t start = SDL_GetPerformanceCounter();
+
         //
         SDL_RenderClear(renderer);
 
@@ -198,21 +179,19 @@ int main(int argc, char *argv[]) {
             }
         }
         //cudaMemcpy(dest, orig,  sizeof(), cudaMemcpyDeviceToHost);
-        struct arr *arr;
-        arr = new (struct arr);
-        arr->pixels = pixels;
-        arr->texture = texture;
-        arr->renderer = renderer;
-        sequential_render<<<grid_size,block_size,0,off%2?x:y>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
-        cudaMemcpyAsync(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost,off%2?x:y);
-        cudaLaunchHostFunc(off%2?x:y, (cudaHostFn_t)foo, (void*)arr);
+        sequential_render<<<grid_size,block_size>>>(pixels_dev, spheres_dev, n_spheres, rays, colors);
+        cudaMemcpy(pixels, pixels_dev, SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t), cudaMemcpyDeviceToHost);
+
+        SDL_UpdateTexture(texture, NULL, &pixels[0], SCREEN_WIDTH * 4);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);
 
         // calculation of frames per second.
         uint64_t end = SDL_GetPerformanceCounter();
         double freq = (double)SDL_GetPerformanceFrequency();
         secs = (float)(end - start) /(freq);
         printf("%f\n", 1/(secs));
-        off++;
+        
     }
     printf("%f\n", 1/(secs));
 

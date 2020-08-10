@@ -38,9 +38,10 @@ void* thread_job(void *a) {
 
     }
     pthread_exit(NULL);
+    return NULL;
 }
 
-void parallel_render(int8_t *pixels, sphere *spheres, int n_spheres,
+void parallel_render(uint8_t *pixels, sphere *spheres, int n_spheres,
     pthread_t *threads, ray *rays, color *colors) {
 
     t_args *args[N_THREADS];

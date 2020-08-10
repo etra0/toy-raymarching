@@ -4,14 +4,17 @@
 #include <constants.h>
 #include <rays.h>
 
+// Fix for the SDL MAIN
+#define SDL_MAIN_HANDLED
+#include <SDL.h>
 
 #ifdef PARALLEL
+#define HAVE_STRUCT_TIMESPEC
 #include <pthread.h>
 #include <parallel_render.h>
 #endif
 
-#define SDL_MAIN_HANDLED
-#include <SDL.h>
+
 
 uint8_t init();
 
@@ -39,7 +42,7 @@ uint8_t init() {
 
 
 
-void sequential_render(int8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
+void sequential_render(uint8_t *pixels, sphere *spheres, int n_spheres, ray *rays, color *colors) {
     for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++) {
         const int x = i % (SCREEN_WIDTH);
         const int y = i / (SCREEN_WIDTH);
@@ -93,8 +96,8 @@ int main(int argc, char *argv[]) {
             SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING,
             SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    int8_t *pixels = (int8_t *)malloc(
-        SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(int8_t));
+    uint8_t *pixels = (uint8_t *)malloc(
+        SCREEN_WIDTH * SCREEN_HEIGHT * 4 * sizeof(uint8_t));
     
     uint8_t running = 1;
     SDL_Event event;

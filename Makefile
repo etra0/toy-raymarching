@@ -12,19 +12,19 @@ cuda: $(OUTPUT)/a.exe
 parallel: $(OUTPUT)/parallel.exe
 
 $(OUTPUT)/main.exe: src/main.cpp bin/rays.obj
-	$(GXX) $(FLAGS) -g -o $@ $? $(INCLUDE) $(LINK) 
+	$(GXX) $(FLAGS) -g -o $@ $^ $(INCLUDE) $(LINK) 
 
 $(OUTPUT)/a.exe: src/main_cuda.cu bin/rays.obj
-	$(GXX) $(FLAGS) -g -o $@ $? $(INCLUDE) $(LINK) 
+	$(GXX) $(FLAGS) -g -o $@ $^ $(INCLUDE) $(LINK) 
 
 $(OUTPUT)/parallel.exe: src/main.cpp bin/rays.obj bin/parallel_render.obj
-	$(GXX) $(FLAGS)	-g -o $@ -DPARALLEL $? $(INCLUDE) $(LINK) -lpthreadGC2 -DN_THREADS=$(NTHREADS)
+	$(GXX) $(FLAGS)	-g -o $@ -DPARALLEL $^ $(INCLUDE) $(LINK) -lpthreadGC2 -DN_THREADS=$(NTHREADS)
 
 bin/rays.obj: src/rays.cpp
-	$(GXX) $(FLAGS) -g -c -o $@ $? $(INCLUDE)
+	$(GXX) $(FLAGS) -g -c -o $@ $^ $(INCLUDE)
 
 bin/parallel_render.obj: src/parallel_render.cpp
-	$(GXX) $(FLAGS) -g -c -o $@ $? $(INCLUDE)
+	$(GXX) $(FLAGS) -g -c -o $@ $^ $(INCLUDE)
 
 clean:
 	del bin\*.obj

@@ -144,9 +144,9 @@ int main(int argc, char *argv[]) {
 
     sphere *spheres = initialize_spheres(n_spheres);
     sphere *spheres_async;
-    cudaMallocHost((void**)&spheres_async,n_spheres * sizeof(spheres));
+    cudaMallocHost((void**)&spheres_async,n_spheres * sizeof(sphere));
 
-    memcpy(spheres_async, spheres, n_spheres * sizeof(spheres));
+    memcpy(spheres_async, spheres, n_spheres * sizeof(sphere));
 
     sphere *spheres_dev;
     cudaMalloc((void **)&spheres_dev, n_spheres*sizeof(sphere));
